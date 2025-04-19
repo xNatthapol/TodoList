@@ -16,6 +16,7 @@ type Config struct {
 	DBPassword           string        `mapstructure:"DB_PASSWORD"`
 	DBName               string        `mapstructure:"DB_NAME"`
 	DBSSLMode            string        `mapstructure:"DB_SSLMODE"`
+	TimeZone             string        `mapstructure:"TIME_ZONE"`
 	PgAdminEmail         string        `mapstructure:"PGADMIN_DEFAULT_EMAIL"`
 	PgAdminPassword      string        `mapstructure:"PGADMIN_DEFAULT_PASSWORD"`
 	JWTSecret            string        `mapstructure:"JWT_SECRET"`
@@ -34,14 +35,23 @@ func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
 
 	viper.SetDefault("SERVER_PORT", "8080")
+	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_PORT", "5432")
+	viper.SetDefault("DB_USER", "postgres")
+	viper.SetDefault("DB_PASSWORD", "postgres")
+	viper.SetDefault("DB_NAME", "todo_db")
 	viper.SetDefault("DB_SSLMODE", "disable")
+	viper.SetDefault("TIME_ZONE", "Asia/Bangkok")
+	viper.SetDefault("JWT_SECRET", "insecure_jwt_secret_key")
 	viper.SetDefault("JWT_EXPIRES_IN_MINUTES", "60m")
 	viper.SetDefault("CORS_ALLOWED_ORIGINS", "*")
 
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Printf("Warning: Failed to read config file: %v. Relying on environment variables.", err)
-		}
+	if err := viper.ReadInConfig(); err == nil {
+		log.Println("INFO: Config file loaded successfully.")
+	} else if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		log.Println("WARNING: Config file not found. Using environment variables and default values.")
+	} else {
+		log.Printf("WARNING: Failed to read config file: %v", err)
 	}
 
 	var cfg Config
@@ -49,6 +59,12 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.JWTSecret == "insecure_jwt_secret_key" {
+		log.Printf("!! WARNING: Using default insecure JWT_SECRET ('insecure_jwt_secret_key'). Set a proper secret in .env or environment variable for security. !!")
+	}
+
 	AppConfig = &cfg
+	log.Printf("INFO: Configuration loaded successfully.")
+
 	return &cfg, nil
 }
