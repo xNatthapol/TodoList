@@ -21,3 +21,6 @@ air_build.log
 .env
 .env.*
 !.env.example
+
+# Generated Swagger documentation directory
+docs/
