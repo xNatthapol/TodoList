@@ -15,14 +15,15 @@ const (
 // Todo defines the todo item model
 // @name Todo
 type Todo struct {
-	ID        uint       `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
-	Title     string     `gorm:"not null" json:"title"`
-	Status    TodoStatus `gorm:"type:varchar(20);default:'Pending';not null" json:"status"`
-	UserID    uint       `gorm:"not null" json:"user_id"`
-	User      User       `gorm:"foreignKey:UserID" json:"-"`
-	// PhotoURL string `json:"photo_url,omitempty"`
+	ID          uint       `gorm:"primarykey" json:"id"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+	Title       string     `gorm:"not null" json:"title"`
+	Description string     `json:"description,omitempty"`
+	Status      TodoStatus `gorm:"type:varchar(20);default:'Pending';not null" json:"status"`
+	UserID      uint       `gorm:"not null" json:"user_id"`
+	User        User       `gorm:"foreignKey:UserID" json:"-"`
+	// ImageURL string `json:"image_url,omitempty"`
 }
 
 // UpdateTodoStatusRequest defines the structure for updating todo status
@@ -34,5 +35,6 @@ type UpdateTodoStatusRequest struct {
 // CreateTodoRequest defines the structure for creating a todo
 // @name CreateTodoRequest
 type CreateTodoRequest struct {
-	Title string `json:"title" validate:"required,min=1,max=255"`
+	Title       string `json:"title" validate:"required,min=1,max=255"`
+	Description string `json:"description" validate:"max=1000"`
 }

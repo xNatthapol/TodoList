@@ -46,10 +46,13 @@ func main() {
 		log.Fatalf("FATAL: Failed to initialize database: %v", err)
 	}
 	userRepo := repositories.NewUserRepository(db)
+	todoRepo := repositories.NewTodoRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
+	todoService := services.NewTodoService(todoRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
+	todoHandler := handlers.NewTodoHandler(todoService)
 
 	app := fiber.New(fiber.Config{
 		AppName: "TodoList App",
@@ -61,9 +64,8 @@ func main() {
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 	app.Use(logger.New())
-	log.Printf("INFO: CORSAllowedOrigins %s", cfg.CORSAllowedOrigins)
 
-	handlers.SetupRoutes(app, authHandler, cfg)
+	handlers.SetupRoutes(app, authHandler, todoHandler, cfg)
 
 	log.Printf("INFO: Starting server on port %s", cfg.ServerPort)
 	if err := app.Listen(":" + cfg.ServerPort); err != nil {
