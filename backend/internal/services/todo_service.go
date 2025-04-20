@@ -16,10 +16,10 @@ var (
 )
 
 type TodoService interface {
-	CreateTodo(ctx context.Context, userID uint, title string, description string) (*models.Todo, error)
+	CreateTodo(ctx context.Context, userID uint, title string, description string, imageURL string) (*models.Todo, error)
 	GetTodosByUserID(ctx context.Context, userID uint) ([]models.Todo, error)
 	GetTodoByID(ctx context.Context, userID, todoID uint) (*models.Todo, error)
-	UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string) (*models.Todo, error)
+	UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string, imageURL *string) (*models.Todo, error)
 	UpdateTodoStatus(ctx context.Context, userID, todoID uint, status models.TodoStatus) (*models.Todo, error)
 	DeleteTodo(ctx context.Context, userID, todoID uint) error
 }
@@ -32,10 +32,11 @@ func NewTodoService(todoRepo repositories.TodoRepository) TodoService {
 	return &todoService{todoRepo: todoRepo}
 }
 
-func (s *todoService) CreateTodo(ctx context.Context, userID uint, title string, description string) (*models.Todo, error) {
+func (s *todoService) CreateTodo(ctx context.Context, userID uint, title string, description string, imageURL string) (*models.Todo, error) {
 	todo := &models.Todo{
 		Title:       title,
 		Description: description,
+		ImageURL:    imageURL,
 		UserID:      userID,
 		Status:      models.StatusPending,
 	}
@@ -75,8 +76,8 @@ func (s *todoService) GetTodoByID(ctx context.Context, userID, todoID uint) (*mo
 	return todo, nil
 }
 
-func (s *todoService) UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string) (*models.Todo, error) {
-	if title == nil && description == nil {
+func (s *todoService) UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string, imageURL *string) (*models.Todo, error) {
+	if title == nil && description == nil && imageURL == nil {
 		return nil, ErrNoUpdateFieldsProvided
 	}
 
@@ -94,6 +95,11 @@ func (s *todoService) UpdateTodo(ctx context.Context, userID, todoID uint, title
 	}
 	if description != nil && todo.Description != *description {
 		todo.Description = *description
+		updated = true
+	}
+
+	if imageURL != nil && todo.ImageURL != *imageURL {
+		todo.ImageURL = *imageURL
 		updated = true
 	}
 

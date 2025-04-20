@@ -52,7 +52,7 @@ func (h *TodoHandler) CreateTodo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Validation failed", Details: err.Error()})
 	}
 
-	todo, err := h.todoService.CreateTodo(c.Context(), userID, req.Title, req.Description)
+	todo, err := h.todoService.CreateTodo(c.Context(), userID, req.Title, req.Description, req.ImageURL)
 	if err != nil {
 		log.Printf("Error creating todo for user %d: %v", userID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{Error: "Failed to create todo"})
@@ -163,7 +163,7 @@ func (h *TodoHandler) UpdateTodo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Validation failed", Details: err.Error()})
 	}
 
-	updatedTodo, err := h.todoService.UpdateTodo(c.Context(), userID, uint(todoID), req.Title, req.Description)
+	updatedTodo, err := h.todoService.UpdateTodo(c.Context(), userID, uint(todoID), req.Title, req.Description, req.ImageURL)
 	if err != nil {
 		log.Printf("Error service UpdateTodo for todo ID %d, user %d: %v", todoID, userID, err)
 		if errors.Is(err, services.ErrTodoNotFound) {

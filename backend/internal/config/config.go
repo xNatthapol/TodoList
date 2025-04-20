@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -8,20 +9,24 @@ import (
 	"github.com/spf13/viper"
 )
 
+const insecureDefaultJwtSecret = "insecure_jwt_secret_key_for_dev_only"
+
 type Config struct {
-	ServerPort           string        `mapstructure:"SERVER_PORT"`
-	DBHost               string        `mapstructure:"DB_HOST"`
-	DBPort               string        `mapstructure:"DB_PORT"`
-	DBUser               string        `mapstructure:"DB_USER"`
-	DBPassword           string        `mapstructure:"DB_PASSWORD"`
-	DBName               string        `mapstructure:"DB_NAME"`
-	DBSSLMode            string        `mapstructure:"DB_SSLMODE"`
-	TimeZone             string        `mapstructure:"TIME_ZONE"`
-	PgAdminEmail         string        `mapstructure:"PGADMIN_DEFAULT_EMAIL"`
-	PgAdminPassword      string        `mapstructure:"PGADMIN_DEFAULT_PASSWORD"`
-	JWTSecret            string        `mapstructure:"JWT_SECRET"`
-	JWTExpiresInDuration time.Duration `mapstructure:"JWT_EXPIRES_IN_MINUTES"`
-	CORSAllowedOrigins   string        `mapstructure:"CORS_ALLOWED_ORIGINS"`
+	ServerPort               string        `mapstructure:"SERVER_PORT"`
+	DBHost                   string        `mapstructure:"DB_HOST"`
+	DBPort                   string        `mapstructure:"DB_PORT"`
+	DBUser                   string        `mapstructure:"DB_USER"`
+	DBPassword               string        `mapstructure:"DB_PASSWORD"`
+	DBName                   string        `mapstructure:"DB_NAME"`
+	DBSSLMode                string        `mapstructure:"DB_SSLMODE"`
+	TimeZone                 string        `mapstructure:"TIME_ZONE"`
+	PgAdminEmail             string        `mapstructure:"PGADMIN_DEFAULT_EMAIL"`
+	PgAdminPassword          string        `mapstructure:"PGADMIN_DEFAULT_PASSWORD"`
+	JWTSecret                string        `mapstructure:"JWT_SECRET"`
+	JWTExpiresInDuration     time.Duration `mapstructure:"JWT_EXPIRES_IN_MINUTES"`
+	CORSAllowedOrigins       string        `mapstructure:"CORS_ALLOWED_ORIGINS"`
+	GCSBucketName            string        `mapstructure:"GCS_BUCKET_NAME"`
+	GCSServiceAccountKeyPath string        `mapstructure:"GCS_SERVICE_ACCOUNT_KEY_PATH"`
 }
 
 var AppConfig *Config
@@ -42,7 +47,7 @@ func LoadConfig(path string) (*Config, error) {
 	viper.SetDefault("DB_NAME", "todo_db")
 	viper.SetDefault("DB_SSLMODE", "disable")
 	viper.SetDefault("TIME_ZONE", "Asia/Bangkok")
-	viper.SetDefault("JWT_SECRET", "insecure_jwt_secret_key")
+	viper.SetDefault("JWT_SECRET", insecureDefaultJwtSecret)
 	viper.SetDefault("JWT_EXPIRES_IN_MINUTES", "60m")
 	viper.SetDefault("CORS_ALLOWED_ORIGINS", "*")
 
@@ -56,11 +61,16 @@ func LoadConfig(path string) (*Config, error) {
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
+		log.Printf("Error unmarshalling config: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	if cfg.JWTSecret == "insecure_jwt_secret_key" {
-		log.Printf("!! WARNING: Using default insecure JWT_SECRET ('insecure_jwt_secret_key'). Set a proper secret in .env or environment variable for security. !!")
+	if cfg.JWTSecret == insecureDefaultJwtSecret {
+		log.Printf("!! WARNING: Using default insecure JWT_SECRET ('%s'). Set a proper secret in .env or environment variable for security. !!", insecureDefaultJwtSecret)
+	}
+
+	if cfg.GCSBucketName == "" || cfg.GCSServiceAccountKeyPath == "" {
+		log.Println("WARNING: GCS_BUCKET_NAME or GCS_SERVICE_ACCOUNT_KEY_PATH not configured. Image upload functionality will be disabled.")
 	}
 
 	AppConfig = &cfg

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/xNatthapol/todo-list/internal/config"
@@ -8,6 +9,7 @@ import (
 	"github.com/xNatthapol/todo-list/internal/handlers"
 	"github.com/xNatthapol/todo-list/internal/repositories"
 	"github.com/xNatthapol/todo-list/internal/services"
+	"github.com/xNatthapol/todo-list/internal/utils"
 
 	_ "github.com/xNatthapol/todo-list/docs"
 
@@ -45,14 +47,36 @@ func main() {
 	if err != nil {
 		log.Fatalf("FATAL: Failed to initialize database: %v", err)
 	}
+
+	var gcsUploader *utils.GCSUploader
+	if cfg.GCSBucketName != "" && cfg.GCSServiceAccountKeyPath != "" {
+		uploader, err := utils.NewGCSUploader(context.Background(), cfg.GCSBucketName, cfg.GCSServiceAccountKeyPath)
+		if err != nil {
+			log.Printf("WARNING: Failed to initialize GCS Uploader: %v. Image uploads disabled.", err)
+			gcsUploader = nil
+		} else {
+			gcsUploader = uploader
+			// Defer closing the GCS client
+			defer func() {
+				if err := gcsUploader.Close(); err != nil {
+					log.Printf("ERROR: Failed to close GCS client: %v", err)
+				}
+			}()
+		}
+	} else {
+		gcsUploader = nil
+	}
+
 	userRepo := repositories.NewUserRepository(db)
 	todoRepo := repositories.NewTodoRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
 	todoService := services.NewTodoService(todoRepo)
+	uploadService := services.NewUploadService(gcsUploader)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	todoHandler := handlers.NewTodoHandler(todoService)
+	uploadHandler := handlers.NewUploadHandler(uploadService)
 
 	app := fiber.New(fiber.Config{
 		AppName: "TodoList App",
@@ -65,7 +89,7 @@ func main() {
 	}))
 	app.Use(logger.New())
 
-	handlers.SetupRoutes(app, authHandler, todoHandler, cfg)
+	handlers.SetupRoutes(app, authHandler, todoHandler, uploadHandler, cfg)
 
 	log.Printf("INFO: Starting server on port %s", cfg.ServerPort)
 	if err := app.Listen(":" + cfg.ServerPort); err != nil {

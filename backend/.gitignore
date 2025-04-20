@@ -24,3 +24,6 @@ air_build.log
 
 # Generated Swagger documentation directory
 docs/
+
+# Keys directory for Google Cloud Storage
+keys/

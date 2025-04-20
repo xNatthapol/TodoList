@@ -20,10 +20,10 @@ type Todo struct {
 	UpdatedAt   time.Time  `json:"updatedAt"`
 	Title       string     `gorm:"not null" json:"title"`
 	Description string     `json:"description,omitempty"`
+	ImageURL    string     `gorm:"type:text" json:"image_url,omitempty"`
 	Status      TodoStatus `gorm:"type:varchar(20);default:'Pending';not null" json:"status"`
 	UserID      uint       `gorm:"not null" json:"user_id"`
 	User        User       `gorm:"foreignKey:UserID" json:"-"`
-	// ImageURL string `json:"image_url,omitempty"`
 }
 
 // CreateTodoRequest defines the structure for creating a todo
@@ -31,6 +31,7 @@ type Todo struct {
 type CreateTodoRequest struct {
 	Title       string `json:"title" validate:"required,min=1,max=255"`
 	Description string `json:"description" validate:"max=1000"`
+	ImageURL    string `json:"image_url" validate:"omitempty,url"`
 }
 
 // UpdateTodoRequest defines the structure for updating todo content
@@ -38,6 +39,7 @@ type CreateTodoRequest struct {
 type UpdateTodoRequest struct {
 	Title       *string `json:"title" validate:"omitempty,min=1,max=255"`
 	Description *string `json:"description" validate:"omitempty,max=1000"`
+	ImageURL    *string `json:"image_url" validate:"omitempty,url"`
 }
 
 // UpdateTodoStatusRequest defines the structure for updating todo status
