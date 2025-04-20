@@ -10,9 +10,10 @@ export const getTodos = async () => {
   }
 };
 
-export const addTodo = async (title, description) => {
+export const addTodo = async (title, description, imageUrl) => {
   try {
-    const response = await apiClient.post("/todos", { title, description });
+    const payload = { title, description, image_url: imageUrl || "" };
+    const response = await apiClient.post("/todos", payload);
     return response.data;
   } catch (error) {
     console.error("Add todo error:", error.response?.data || error.message);
@@ -35,7 +36,14 @@ export const updateTodoStatus = async (id, status) => {
 
 export const updateTodo = async (id, updateData) => {
   try {
-    const response = await apiClient.patch(`/todos/${id}`, updateData);
+    const payload = {};
+    if (updateData.title !== undefined) payload.title = updateData.title;
+    if (updateData.description !== undefined)
+      payload.description = updateData.description;
+    if (updateData.imageUrl !== undefined)
+      payload.image_url = updateData.imageUrl;
+
+    const response = await apiClient.patch(`/todos/${id}`, payload);
     return response.data;
   } catch (error) {
     console.error(

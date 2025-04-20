@@ -28,14 +28,14 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     mouseDownTargetIsBackdrop.current = false;
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUpGlobal = () => {
     mouseDownTargetIsBackdrop.current = false;
   };
 
   useEffect(() => {
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mouseup", handleMouseUpGlobal);
     return () => {
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mouseup", handleMouseUpGlobal);
     };
   }, []);
 
@@ -43,13 +43,13 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     return null;
   }
 
-  const handleContentClick = (e) => {
+  const handleContentInteraction = (e) => {
     e.stopPropagation();
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/10 transition-opacity duration-300 ease-in-out" // Kept subtle tint example
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/10 transition-opacity duration-300 ease-in-out"
       onMouseDown={handleMouseDownOnBackdrop}
       onClick={handleClickOnBackdrop}
       role="dialog"
@@ -57,13 +57,13 @@ const Modal = ({ isOpen, onClose, title, children }) => {
       aria-labelledby="modal-title"
     >
       <div
-        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out scale-95 opacity-0 animate-modal-scale-in"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={handleContentClick}
+        className="relative w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl transition-transform duration-300 ease-in-out scale-95 opacity-0 animate-modal-scale-in" // Increased max-w-2xl
+        onMouseDown={handleContentInteraction}
+        onClick={handleContentInteraction}
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer z-10"
           aria-label="Close modal"
         >
           <svg

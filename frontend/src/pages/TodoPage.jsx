@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as todoService from "../services/todoService";
+import * as uploadService from "../services/uploadService";
 import TodoList from "../components/todo/TodoList";
-import AddTodoForm from "../components/todo/AddTodoForm";
 import Modal from "../components/common/Modal";
+import AddTodoForm from "../components/todo/AddTodoForm";
 
 function TodoPage() {
   const [todos, setTodos] = useState([]);
@@ -11,9 +12,16 @@ function TodoPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
   const [isViewEditModalOpen, setIsViewEditModalOpen] = useState(false);
+
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editStatus, setEditStatus] = useState("Pending");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editSelectedFile, setEditSelectedFile] = useState(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState(null);
+  const [isEditUploading, setIsEditUploading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const editFileInputRef = useRef(null);
 
   const fetchTodos = useCallback(async () => {
     setIsLoading(true);
@@ -34,14 +42,13 @@ function TodoPage() {
     fetchTodos();
   }, [fetchTodos]);
 
-  const handleAddTodo = async (title, description) => {
+  const handleAddTodo = async (title, description, imageUrl) => {
     setError("");
-    if (!title) return;
     try {
-      const newTodo = await todoService.addTodo(title, description);
+      const newTodo = await todoService.addTodo(title, description, imageUrl);
       setTodos((prevTodos) => [newTodo, ...prevTodos]);
     } catch (err) {
-      console.error("Failed to add todo:", err);
+      console.error("Failed to add todo (from page):", err);
       setError(err.error || "Failed to add todo.");
       throw err;
     }
@@ -52,42 +59,126 @@ function TodoPage() {
     setEditTitle(todo.title);
     setEditDescription(todo.description || "");
     setEditStatus(todo.status);
+    setEditImageUrl(todo.image_url || "");
+    setEditPreviewUrl(todo.image_url || null);
+    setEditSelectedFile(null);
+    setEditError("");
+    setIsEditUploading(false);
+    if (editFileInputRef.current) editFileInputRef.current.value = "";
     setIsViewEditModalOpen(true);
   };
 
   const handleCloseViewEditModal = () => {
     setIsViewEditModalOpen(false);
     setSelectedTodo(null);
+    if (editPreviewUrl && editPreviewUrl !== selectedTodo?.image_url) {
+      URL.revokeObjectURL(editPreviewUrl);
+    }
+    setEditPreviewUrl(null);
+  };
+
+  const handleEditFileChange = async (event) => {
+    setEditError("");
+    const file = event.target.files?.[0];
+    if (!file) {
+      setEditSelectedFile(null);
+      return;
+    }
+
+    // Validation
+    const allowedTypes = ["image/jpeg", "image/png"];
+    if (!allowedTypes.includes(file.type)) {
+      setEditError("Invalid file type (JPG, PNG only).");
+      if (editFileInputRef.current) editFileInputRef.current.value = "";
+      setEditSelectedFile(null);
+      return;
+    }
+    // Max file size 5 MB
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setEditError("File too large (Max 5MB).");
+      if (editFileInputRef.current) editFileInputRef.current.value = "";
+      setEditSelectedFile(null);
+      return;
+    }
+
+    setEditSelectedFile(file);
+
+    // Clean up old preview URL before creating new one
+    if (editPreviewUrl && editPreviewUrl !== selectedTodo?.image_url) {
+      URL.revokeObjectURL(editPreviewUrl);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setEditPreviewUrl(objectUrl);
+
+    setIsEditUploading(true);
+    setEditImageUrl("");
+    try {
+      const result = await uploadService.uploadImage(file);
+      setEditImageUrl(result.image_url);
+      setEditError("");
+    } catch (uploadError) {
+      console.error("Upload failed in edit modal:", uploadError);
+      setEditError(uploadError.message || "Image upload failed.");
+      setEditPreviewUrl(selectedTodo?.image_url || null);
+      setEditSelectedFile(null);
+      if (editFileInputRef.current) editFileInputRef.current.value = "";
+    } finally {
+      setIsEditUploading(false);
+    }
+  };
+
+  const handleRemoveEditImage = () => {
+    if (editPreviewUrl && editPreviewUrl !== selectedTodo?.image_url) {
+      URL.revokeObjectURL(editPreviewUrl);
+    }
+    setEditSelectedFile(null);
+    setEditPreviewUrl(null);
+    setEditImageUrl("");
+    if (editFileInputRef.current) editFileInputRef.current.value = "";
+    setEditError("");
   };
 
   const handleSaveEdit = async () => {
     if (!selectedTodo || !editTitle.trim()) {
-      alert("Title cannot be empty!");
+      setEditError("Title cannot be empty!");
       return;
     }
-    setError("");
+    if (isEditUploading) {
+      setEditError("Please wait for image upload to complete.");
+      return;
+    }
+    setEditError("");
+
+    const originalTodos = todos.map((t) => ({ ...t }));
 
     const descriptionChanged =
       editDescription !== (selectedTodo.description || "");
     const titleChanged = editTitle !== selectedTodo.title;
     const statusChanged = editStatus !== selectedTodo.status;
-
-    const originalTodos = todos.map((t) => ({ ...t }));
-    let promises = [];
+    const imageChanged = editImageUrl !== (selectedTodo.image_url || "");
 
     let contentUpdateData = {};
     if (titleChanged) contentUpdateData.title = editTitle;
     if (descriptionChanged) contentUpdateData.description = editDescription;
+    if (imageChanged) contentUpdateData.imageUrl = editImageUrl;
 
     setTodos((prevTodos) =>
       prevTodos.map((todo) =>
         todo.id === selectedTodo.id
-          ? { ...todo, ...contentUpdateData, status: editStatus }
+          ? {
+              ...todo,
+              title: editTitle,
+              description: editDescription,
+              status: editStatus,
+              image_url: editImageUrl,
+            }
           : todo,
       ),
     );
 
     try {
+      let promises = [];
       if (Object.keys(contentUpdateData).length > 0) {
         promises.push(
           todoService.updateTodo(selectedTodo.id, contentUpdateData),
@@ -107,7 +198,7 @@ function TodoPage() {
       handleCloseViewEditModal();
     } catch (err) {
       console.error("Failed to save updates:", err);
-      setError(err.error || "Failed to save changes.");
+      setEditError(err.error || "Failed to save changes.");
       setTodos(originalTodos);
     }
   };
@@ -120,7 +211,7 @@ function TodoPage() {
       )
     )
       return;
-    setError("");
+    setEditError("");
 
     const originalTodos = [...todos];
     setTodos((prevTodos) =>
@@ -134,6 +225,7 @@ function TodoPage() {
       setError(err.error || "Failed to delete todo.");
       setTodos(originalTodos);
       console.error(err);
+      handleCloseViewEditModal();
     }
   };
 
@@ -145,9 +237,12 @@ function TodoPage() {
   const secondaryButtonClasses = `${buttonClasses} bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300 focus:ring-indigo-500`;
   const dangerButtonClasses = `${buttonClasses} bg-red-600 hover:bg-red-700 focus:ring-red-500`;
   const saveEditButtonClasses = `${buttonClasses} bg-green-600 hover:bg-green-700 focus:ring-green-500`;
+  const fileInputButtonClasses =
+    "text-sm text-violet-600 hover:text-violet-800 cursor-pointer font-medium underline";
 
   return (
-    <div className="mt-4 max-w-3xl mx-auto">
+    <div className="mt-4 max-w-4xl mx-auto">
+      {" "}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-semibold text-gray-800">My Todo List</h2>
         <button
@@ -157,20 +252,16 @@ function TodoPage() {
           Add New Todo
         </button>
       </div>
-
       {error && !isLoading && (
         <p className="text-center text-red-600 my-3 p-2 bg-red-100 border border-red-400 rounded">
           {error}
         </p>
       )}
-
       {isLoading ? (
         <p className="text-center text-gray-500 mt-10">Loading todos...</p>
       ) : (
         <TodoList todos={todos} onViewEditClick={handleViewEditClick} />
       )}
-
-      {/* Add Todo Modal */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -181,88 +272,147 @@ function TodoPage() {
           onTodoAdded={() => setIsAddModalOpen(false)}
         />
       </Modal>
-
-      {/* View/Edit Todo Modal */}
       {selectedTodo && (
         <Modal
           isOpen={isViewEditModalOpen}
           onClose={handleCloseViewEditModal}
           title="Edit Todo Details"
         >
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="edit-title"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Title
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1 space-y-2 flex flex-col items-center">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Image
               </label>
+              <div className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 overflow-hidden bg-gray-50">
+                {editPreviewUrl ? (
+                  <img
+                    src={editPreviewUrl}
+                    alt="Todo Preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>No Image</span>
+                )}
+              </div>
               <input
-                id="edit-title"
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className={`${inputClasses} text-lg font-semibold`}
-                required
+                type="file"
+                id="edit-todo-image"
+                ref={editFileInputRef}
+                onChange={handleEditFileChange}
+                accept="image/png, image/jpeg, image/gif, image/webp"
+                className="sr-only"
               />
-            </div>
-            <div>
-              <label
-                htmlFor="edit-desc"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Description
-              </label>
-              <textarea
-                id="edit-desc"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Description..."
-                rows={4}
-                className={`${inputClasses} resize-y min-h-[96px] max-h-60`}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="edit-status"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Status
-              </label>
-              <select
-                id="edit-status"
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
-                className={inputClasses}
-              >
-                <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Done">Done</option>
-              </select>
-            </div>
-            <div className="flex justify-between items-center pt-4 border-t mt-4">
-              <button
-                onClick={handleDeleteFromModal}
-                className={dangerButtonClasses}
-              >
-                Delete
-              </button>
-              <div className="space-x-3">
-                <button
-                  onClick={handleCloseViewEditModal}
-                  className={secondaryButtonClasses}
+              <div className="flex items-center justify-center space-x-3 w-full mt-1">
+                <label
+                  htmlFor="edit-todo-image"
+                  className={fileInputButtonClasses}
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className={saveEditButtonClasses}
+                  {editSelectedFile
+                    ? `Uploading...`
+                    : editImageUrl
+                      ? "Change"
+                      : "Upload"}{" "}
+                  Image
+                </label>
+                {editPreviewUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveEditImage}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              {isEditUploading && (
+                <p className="text-sm text-violet-600">Uploading image...</p>
+              )}
+            </div>
+
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <label
+                  htmlFor="edit-title"
+                  className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Save Changes
-                </button>
+                  Title
+                </label>
+                <input
+                  id="edit-title"
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className={`${inputClasses} text-lg font-semibold`}
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-desc"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="edit-desc"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Description..."
+                  rows={4}
+                  className={`${inputClasses} resize-y min-h-[96px] max-h-60`}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-status"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Status
+                </label>
+                <select
+                  id="edit-status"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className={inputClasses}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
               </div>
             </div>
-          </div>
+
+            <div className="md:col-span-3 pt-4 border-t mt-2">
+              {editError && (
+                <p className="text-red-600 text-sm font-medium mb-3">
+                  {editError}
+                </p>
+              )}
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={handleDeleteFromModal}
+                  className={dangerButtonClasses}
+                >
+                  Delete Todo
+                </button>
+                <div className="space-x-3">
+                  <button
+                    onClick={handleCloseViewEditModal}
+                    className={secondaryButtonClasses}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className={saveEditButtonClasses}
+                    disabled={isEditUploading}
+                  >
+                    {isEditUploading ? "Uploading..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>{" "}
         </Modal>
       )}
     </div>
