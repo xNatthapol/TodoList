@@ -18,7 +18,7 @@ var (
 )
 
 type AuthService interface {
-	RegisterUser(ctx context.Context, email, password string) (*models.User, error)
+	SignUpUser(ctx context.Context, email, password string) (*models.User, error)
 	LoginUser(ctx context.Context, email, password string) (string, *models.User, error)
 }
 
@@ -31,7 +31,7 @@ func NewAuthService(userRepo repositories.UserRepository, cfg *config.Config) Au
 	return &authService{userRepo: userRepo, cfg: cfg}
 }
 
-func (s *authService) RegisterUser(ctx context.Context, email, password string) (*models.User, error) {
+func (s *authService) SignUpUser(ctx context.Context, email, password string) (*models.User, error) {
 	// Check if user already exists
 	_, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {

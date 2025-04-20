@@ -22,9 +22,9 @@ func NewAuthHandler(authService services.AuthService) *AuthHandler {
 	}
 }
 
-// RegisterRequest defines the request body for user registration
-// @name RegisterRequest
-type RegisterRequest struct {
+// SignUpRequest defines the request body for user sign up
+// @name SignUpRequest
+type SignUpRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
 }
@@ -43,38 +43,38 @@ type AuthResponse struct {
 	User  *models.User `json:"user"`
 }
 
-// Register handles user registration
-// @Summary Register a new user
+// SignUp handles for user sign up
+// @Summary Sign up a new user
 // @Description Creates a new user account.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param user body RegisterRequest true "User registration details"
+// @Param user body SignUpRequest true "User sign up details"
 // @Success 201 {object} models.User "User created successfully (excluding password)"
 // @Failure 400 {object} ErrorResponse "Validation error or invalid input"
 // @Failure 409 {object} ErrorResponse "User with this email already exists"
 // @Failure 500 {object} ErrorResponse "Internal server error"
-// @Router /auth/register [post]
-func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	req := new(RegisterRequest)
+// @Router /auth/signup [post]
+func (h *AuthHandler) SignUp(c *fiber.Ctx) error {
+	req := new(SignUpRequest)
 
 	if err := c.BodyParser(req); err != nil {
-		log.Printf("Error parsing register request body: %v", err)
+		log.Printf("Error parsing sign up request body: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Cannot parse JSON"})
 	}
 
 	if err := h.validate.Struct(req); err != nil {
-		log.Printf("Validation error during registration: %v", err)
+		log.Printf("Validation error during sign up: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Validation failed", Details: err.Error()})
 	}
 
-	user, err := h.authService.RegisterUser(c.Context(), req.Email, req.Password)
+	user, err := h.authService.SignUpUser(c.Context(), req.Email, req.Password)
 	if err != nil {
-		log.Printf("Error registering user: %v", err)
+		log.Printf("Error sign up user: %v", err)
 		if errors.Is(err, services.ErrUserAlreadyExists) {
 			return c.Status(fiber.StatusConflict).JSON(ErrorResponse{Error: err.Error()})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{Error: "Failed to register user"})
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{Error: "Failed to sign up user"})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(user)

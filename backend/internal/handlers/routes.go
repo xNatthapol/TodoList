@@ -19,7 +19,7 @@ func SetupRoutes(app *fiber.App, authHandler *AuthHandler, todoHandler *TodoHand
 
 	// Auth Routes
 	auth := api.Group("/auth")
-	auth.Post("/register", authHandler.Register)
+	auth.Post("/signup", authHandler.SignUp)
 	auth.Post("/login", authHandler.Login)
 
 	// Todo Routes
