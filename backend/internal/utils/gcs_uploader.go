@@ -60,10 +60,19 @@ func (g *GCSUploader) UploadFile(ctx context.Context, objectName string, fileRea
 		return "", fmt.Errorf("GCS Writer.Close: %w", err)
 	}
 
-	publicURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.BucketName, objectName)
-	log.Printf("INFO: File uploaded successfully to GCS: %s", publicURL)
+	opts := &storage.SignedURLOptions{
+		Scheme:  storage.SigningSchemeV4,
+		Method:  "GET",
+		Expires: time.Now().Add(168 * time.Hour),
+	}
 
-	return publicURL, nil
+	url, err := g.Client.Bucket(g.BucketName).SignedURL(objectName, opts)
+	if err != nil {
+		log.Printf("ERROR: Failed to generate signed URL for object '%s' in bucket '%s': %v", objectName, g.BucketName, err)
+		return "", fmt.Errorf("failed to generate GCS signed URL for object '%s': %w", objectName, err)
+	}
+
+	return url, nil
 }
 
 // Close releases resources associated with the GCS client.

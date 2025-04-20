@@ -39,7 +39,7 @@ type CreateTodoRequest struct {
 type UpdateTodoRequest struct {
 	Title       *string `json:"title" validate:"omitempty,min=1,max=255"`
 	Description *string `json:"description" validate:"omitempty,max=1000"`
-	ImageURL    *string `json:"image_url" validate:"omitempty,url"`
+	ImageURL    *string `json:"image_url" validate:"omitempty"`
 }
 
 // UpdateTodoStatusRequest defines the structure for updating todo status
