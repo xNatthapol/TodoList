@@ -26,15 +26,22 @@ type Todo struct {
 	// ImageURL string `json:"image_url,omitempty"`
 }
 
-// UpdateTodoStatusRequest defines the structure for updating todo status
-// @name UpdateTodoStatusRequest
-type UpdateTodoStatusRequest struct {
-	Status TodoStatus `json:"status" validate:"required,oneof=Pending 'In Progress' Done"`
-}
-
 // CreateTodoRequest defines the structure for creating a todo
 // @name CreateTodoRequest
 type CreateTodoRequest struct {
 	Title       string `json:"title" validate:"required,min=1,max=255"`
 	Description string `json:"description" validate:"max=1000"`
+}
+
+// UpdateTodoRequest defines the structure for updating todo content
+// @name UpdateTodoRequest
+type UpdateTodoRequest struct {
+	Title       *string `json:"title" validate:"omitempty,min=1,max=255"`
+	Description *string `json:"description" validate:"omitempty,max=1000"`
+}
+
+// UpdateTodoStatusRequest defines the structure for updating todo status
+// @name UpdateTodoStatusRequest
+type UpdateTodoStatusRequest struct {
+	Status TodoStatus `json:"status" validate:"required,oneof=Pending 'In Progress' Done"`
 }

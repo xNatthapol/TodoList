@@ -10,14 +10,16 @@ import (
 )
 
 var (
-	ErrTodoNotFound = errors.New("todo not found")
-	ErrForbidden    = errors.New("user does not have permission to access this resource")
+	ErrTodoNotFound           = errors.New("todo not found")
+	ErrForbidden              = errors.New("user does not have permission to access this resource")
+	ErrNoUpdateFieldsProvided = errors.New("no update fields provided")
 )
 
 type TodoService interface {
 	CreateTodo(ctx context.Context, userID uint, title string, description string) (*models.Todo, error)
 	GetTodosByUserID(ctx context.Context, userID uint) ([]models.Todo, error)
 	GetTodoByID(ctx context.Context, userID, todoID uint) (*models.Todo, error)
+	UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string) (*models.Todo, error)
 	UpdateTodoStatus(ctx context.Context, userID, todoID uint, status models.TodoStatus) (*models.Todo, error)
 	DeleteTodo(ctx context.Context, userID, todoID uint) error
 }
@@ -73,7 +75,42 @@ func (s *todoService) GetTodoByID(ctx context.Context, userID, todoID uint) (*mo
 	return todo, nil
 }
 
+func (s *todoService) UpdateTodo(ctx context.Context, userID, todoID uint, title *string, description *string) (*models.Todo, error) {
+	if title == nil && description == nil {
+		return nil, ErrNoUpdateFieldsProvided
+	}
+
+	// checkOwnership verifies if the todo exists and belongs to the user
+	todo, err := s.checkOwnership(ctx, userID, todoID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply updates if fields were provided in the request
+	updated := false
+	if title != nil && todo.Title != *title {
+		todo.Title = *title
+		updated = true
+	}
+	if description != nil && todo.Description != *description {
+		todo.Description = *description
+		updated = true
+	}
+
+	// Only save if something actually changed
+	if !updated {
+		return todo, nil
+	}
+
+	err = s.todoRepo.UpdateTodo(ctx, todo)
+	if err != nil {
+		return nil, err
+	}
+	return todo, nil
+}
+
 func (s *todoService) UpdateTodoStatus(ctx context.Context, userID, todoID uint, status models.TodoStatus) (*models.Todo, error) {
+	// checkOwnership verifies if the todo exists and belongs to the user
 	todo, err := s.checkOwnership(ctx, userID, todoID)
 	if err != nil {
 		return nil, err
@@ -82,7 +119,6 @@ func (s *todoService) UpdateTodoStatus(ctx context.Context, userID, todoID uint,
 	// Update status
 	todo.Status = status
 
-	// Save changes
 	err = s.todoRepo.UpdateTodo(ctx, todo)
 	if err != nil {
 		return nil, err

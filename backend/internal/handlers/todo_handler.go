@@ -127,6 +127,60 @@ func (h *TodoHandler) GetTodo(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(todo)
 }
 
+// UpdateTodo updates the content of a specific todo item
+// @Summary Update todo item
+// @Description Partially updates the content of a specific todo item. Only include fields to be updated.
+// @Tags Todos
+// @Accept json
+// @Produce json
+// @Param id path int true "Todo ID" Format(uint)
+// @Param todo body models.UpdateTodoRequest true "Fields to update"
+// @Security BearerAuth
+// @Success 200 {object} models.Todo "Todo updated successfully"
+// @Failure 400 {object} ErrorResponse "Invalid ID format, validation error, or no update fields provided"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "Todo not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /todos/{id} [patch]
+func (h *TodoHandler) UpdateTodo(c *fiber.Ctx) error {
+	userID := c.Locals(middleware.UserIDKey).(uint)
+	todoIDStr := c.Params("id")
+	todoID, err := strconv.ParseUint(todoIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid todo ID format for update: %s", todoIDStr)
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Invalid todo ID format"})
+	}
+
+	req := new(models.UpdateTodoRequest)
+	if err := c.BodyParser(req); err != nil {
+		log.Printf("Error parsing update todo request body: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Cannot parse JSON"})
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		log.Printf("Validation error during todo update: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Validation failed", Details: err.Error()})
+	}
+
+	updatedTodo, err := h.todoService.UpdateTodo(c.Context(), userID, uint(todoID), req.Title, req.Description)
+	if err != nil {
+		log.Printf("Error service UpdateTodo for todo ID %d, user %d: %v", todoID, userID, err)
+		if errors.Is(err, services.ErrTodoNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(ErrorResponse{Error: err.Error()})
+		}
+		if errors.Is(err, services.ErrForbidden) {
+			return c.Status(fiber.StatusForbidden).JSON(ErrorResponse{Error: err.Error()})
+		}
+		if errors.Is(err, services.ErrNoUpdateFieldsProvided) {
+			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: err.Error()})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{Error: "Failed to update todo"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(updatedTodo)
+}
+
 // UpdateTodoStatus updates the status of a specific todo item
 // @Summary Update todo status
 // @Description Updates the status (Pending, In Progress, Done) of a specific todo item.
