@@ -32,7 +32,7 @@ func NewUploadHandler(uploadService services.UploadService) *UploadHandler {
 // @Tags Uploads
 // @Accept multipart/form-data
 // @Produce json
-// @Param image formData file true "Image file to upload (JPEG, PNG, GIF, WebP allowed, max 5MB)"
+// @Param image formData file true "Image file to upload (JPEG, PNG allowed, max 5MB)"
 // @Security BearerAuth
 // @Success 200 {object} UploadResponse "Image uploaded successfully"
 // @Failure 400 {object} ErrorResponse "Missing file, invalid file type/size"
@@ -59,10 +59,10 @@ func (h *UploadHandler) UploadImage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: fmt.Sprintf("File size exceeds the limit of %dMB", maxFileSize/1024/1024)})
 	}
 	contentType := fileHeader.Header.Get("Content-Type")
-	allowedTypes := map[string]bool{"image/jpeg": true, "image/png": true, "image/gif": true, "image/webp": true}
+	allowedTypes := map[string]bool{"image/jpeg": true, "image/png": true}
 	if !allowedTypes[contentType] {
 		log.Printf("WARNING: Upload rejected. Invalid file content type: %s", contentType)
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Invalid file type. Only JPEG, PNG, GIF, WebP allowed."})
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{Error: "Invalid file type. Only JPEG, PNG allowed."})
 	}
 
 	imageURL, err := h.uploadService.UploadImage(c.Context(), userID, fileHeader)
