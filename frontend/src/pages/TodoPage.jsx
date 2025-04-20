@@ -7,6 +7,7 @@ import AddTodoForm from "../components/todo/AddTodoForm";
 
 function TodoPage() {
   const [todos, setTodos] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("All");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -41,6 +42,13 @@ function TodoPage() {
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
+
+  const filteredTodos =
+    filterStatus === "All"
+      ? todos
+      : filterStatus === "Hide Done"
+        ? todos.filter((todo) => todo.status !== "Done")
+        : todos.filter((todo) => todo.status === filterStatus);
 
   const handleAddTodo = async (title, description, imageUrl) => {
     setError("");
@@ -240,9 +248,21 @@ function TodoPage() {
   const fileInputButtonClasses =
     "text-sm text-violet-600 hover:text-violet-800 cursor-pointer font-medium underline";
 
+  const filterButtonClasses =
+    "py-1 px-3 border rounded-full shadow-sm text-sm font-medium transition duration-150 ease-in-out cursor-pointer";
+
+  const filterStatusButtonClasses = {
+    All: "border-gray-300 hover:bg-blue-100",
+    Pending: "border-gray-300 hover:bg-gray-100",
+    "In Progress": "border-gray-300 hover:bg-yellow-100",
+    Done: "border-gray-300 hover:bg-green-100",
+    "Hide Done": "border-gray-300 hover:bg-violet-100",
+  };
+
+  const activeButtonClass = "text-black bg-white";
+
   return (
     <div className="mt-4 max-w-4xl mx-auto">
-      {" "}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-semibold text-gray-800">My Todo List</h2>
         <button
@@ -252,6 +272,45 @@ function TodoPage() {
           Add New Todo
         </button>
       </div>
+
+      <div className="mb-4">
+        <label className="mr-2 font-medium text-gray-700">
+          Filter by Status:
+        </label>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setFilterStatus("All")}
+            className={`${filterButtonClasses} ${filterStatus === "All" ? activeButtonClass : "bg-white"} ${filterStatusButtonClasses["All"]}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterStatus("Hide Done")}
+            className={`${filterButtonClasses} ${filterStatus === "Hide Done" ? activeButtonClass : "bg-white"} ${filterStatusButtonClasses["Hide Done"]}`}
+          >
+            Hide Done
+          </button>
+          <button
+            onClick={() => setFilterStatus("Pending")}
+            className={`${filterButtonClasses} ${filterStatus === "Pending" ? activeButtonClass : "bg-white"} ${filterStatusButtonClasses["Pending"]}`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setFilterStatus("In Progress")}
+            className={`${filterButtonClasses} ${filterStatus === "In Progress" ? activeButtonClass : "bg-white"} ${filterStatusButtonClasses["In Progress"]}`}
+          >
+            In Progress
+          </button>
+          <button
+            onClick={() => setFilterStatus("Done")}
+            className={`${filterButtonClasses} ${filterStatus === "Done" ? activeButtonClass : "bg-white"} ${filterStatusButtonClasses["Done"]}`}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+
       {error && !isLoading && (
         <p className="text-center text-red-600 my-3 p-2 bg-red-100 border border-red-400 rounded">
           {error}
@@ -260,7 +319,7 @@ function TodoPage() {
       {isLoading ? (
         <p className="text-center text-gray-500 mt-10">Loading todos...</p>
       ) : (
-        <TodoList todos={todos} onViewEditClick={handleViewEditClick} />
+        <TodoList todos={filteredTodos} onViewEditClick={handleViewEditClick} />
       )}
       <Modal
         isOpen={isAddModalOpen}
