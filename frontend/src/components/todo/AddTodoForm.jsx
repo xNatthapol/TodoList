@@ -171,11 +171,11 @@ const AddTodoForm = ({ onAddTodo, onTodoAdded }) => {
             htmlFor="new-todo-desc"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Description
+            Description (Optional)
           </label>
           <textarea
             id="new-todo-desc"
-            placeholder="Optional description..."
+            placeholder="Description..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
