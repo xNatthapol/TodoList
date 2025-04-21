@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
 const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -23,7 +23,17 @@ const Navbar = () => {
         <div className="space-x-4">
           {isAuthenticated ? (
             <>
-              <span className="mr-4 hidden sm:inline">Welcome!</span>
+              {user?.email && (
+                <span
+                  className="mr-4 hidden sm:inline text-sm"
+                  title={user.email}
+                >
+                  Logged in as <b>{user.email}</b>
+                </span>
+              )}
+              {!user?.email && (
+                <span className="mr-4 hidden sm:inline text-sm">Welcome!</span>
+              )}
               <button
                 onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-600 text-white py-1 px-4 rounded transition duration-150 ease-in-out text-sm font-medium cursor-pointer"
