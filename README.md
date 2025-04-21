@@ -16,6 +16,29 @@ A full-stack Todo application built with Go (Fiber) for the backend and React (V
 
 ## User Interface
 
+### SignUp Page
+
+<img width="1419" alt="signup-app" src="https://github.com/user-attachments/assets/ebe3a7e3-0a70-47aa-9774-8f551ffe2479" />
+
+### Login Page
+
+<img width="1420" alt="login-app" src="https://github.com/user-attachments/assets/a1872c9f-7349-472c-a5c5-9f5ed0d2dfa9" />
+
+### Todo List Page
+
+<img width="1420" alt="todo-list-page" src="https://github.com/user-attachments/assets/f355b5f6-b9f3-41d2-beda-abd0a07c57e9" />
+
+### Add New Todo
+
+<img width="1419" alt="add-todo" src="https://github.com/user-attachments/assets/7afa0ac1-7c6d-49c9-a8a8-041dfc93cf34" />
+
+### Edit Todo
+
+<img width="1419" alt="edit-todo" src="https://github.com/user-attachments/assets/c6776e12-98ea-42db-a371-23e8ae234e30" />
+
+### Not Found Page
+
+<img width="1420" alt="not-found-page" src="https://github.com/user-attachments/assets/d2cd9548-1e8d-4102-858e-ebb652869359" />
 
 
 ## Tech Stack
