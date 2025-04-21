@@ -286,7 +286,7 @@ This interface allows you to explore and interact with the backend API endpoints
         SERVER_PORT=8080
 
         # Database Configuration (for backend connection AND Docker)
-        DB_HOST=db         # Use 'db' when backend connects to the Docker container, 'localhost' if DB runs natively
+        DB_HOST=localhost
         DB_PORT=5432
         DB_USER=your_postgres_user
         DB_PASSWORD=your_postgres_password # *** CHOOSE A STRONG PASSWORD ***
